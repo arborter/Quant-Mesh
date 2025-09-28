@@ -20,6 +20,8 @@ The Pi has two operations:
 4. The Broker can aggregate data from streams, clean the data, and provide data in structure useful for the hedge fund.
 5. The hedge fund actively monitors feeds to assess what decision to make using a machine learning algorithm I have written.
 
+## Injecting Volatility
+
 The ESP32s are connected to sensors as a means to simulate the effects of news, natural disasters, geopolitics, and other phenomena that impact the stock market.
 
 The following system is in place:
