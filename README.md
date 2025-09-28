@@ -13,7 +13,7 @@ The Pi has two operations:
 
 1. Agents send their data to a synthetic exchange on the PiSE over **MQTT**.
 2. The PiSE organizes the data from each agent into the following feeds:
-    - Timestamps
+    - Timestamps 
     - Trade prices 
     - Market status
 3. The Broker subscribes to different streams at the request of the hedge fund.
