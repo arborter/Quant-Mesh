@@ -8,7 +8,7 @@ A central ESP32 acts as a **hedge fund** who analyzes the market to simulate tra
 ## Operation
 
 The Pi has two operations:
-- It behaves as an exchange (further refereed to as **PiSE**).
+- It behaves as an exchange (further referred to as **PiSE**).
 - It behaves as a prime-broker (further referred to as **Broker**).
 
 1. Agents send their data to a synthetic exchange on the PiSE over **MQTT**.
