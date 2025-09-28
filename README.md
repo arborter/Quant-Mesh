@@ -3,7 +3,7 @@
 This project simulates a miniature financial market using a network of ESP32 microcontrollers and a Raspberry Pi.
 
 Each ESP32 acts as an **agent** that generates a synthetic stock price using stochastic processes like **Geometric Browninan Motion (GBM)**, **random walks**, and random number distribution.
-A central ESP32 acts as a **hedge fund** who analyzes the market, calculates risk, asseses whether to buy, sell, short, etc., then makes trade decisions in real time.
+A central ESP32 acts as a **hedge fund** who analyzes the market to simulate trading strategies.
 
 ## Operation
 
@@ -18,7 +18,7 @@ The Pi has two operations:
     - Market status
 3. The Broker subscribes to different streams at the request of the hedge fund.
 4. The Broker can aggregate data from streams, clean the data, and provide data in structure useful for the hedge fund.
-5. The hedge fund actively monitors feeds to assess and simulates trading strategies.
+5. The hedge fund actively monitors feeds to assess and simulate trading strategies.
 
 ## Injecting Volatility
 
