@@ -18,7 +18,7 @@ The Pi has two operations:
     - Market status
 3. The Broker subscribes to different streams at the request of the hedge fund.
 4. The Broker can aggregate data from streams, clean the data, and provide data in structure useful for the hedge fund.
-5. The hedge fund actively monitors feeds to assess what decision to make using a machine learning algorithm I have written.
+5. The hedge fund actively monitors feeds to assess and simulates trading strategies.
 
 ## Injecting Volatility
 
