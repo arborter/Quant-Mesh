@@ -2,6 +2,7 @@
  * Project Name: Stock Simulation
  * Creator: Raphael
  * Date: 09 / 29 / 2025
+ * Status: Work in Progress
  * 
  * Objective:
  *  This is a simulation of a stock through synthetic means.
@@ -26,6 +27,52 @@
  * Libraries necessary:
  *  - OneWire (for the DS18x20 series of temperature sensor)
 */
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+ * To-do:
+ * 1. Integrate ISR for temperature change to relate to stock in real time
+ * 2. Integrate into the struct Stock the update of temperature change as a variable
+ * 3. Create Market-Update variable in struct Stock to update as a means to represent changes in news, geopolitics, natural disasters, changes in industry, etc.  
+ * 4. Integrate GBM into a variable of the struct stock.
+ * 5. Add timestamps as variable in struct of stock.
+ * 6. These all integrated, we have a stock who operates dynamically in real time to events and standard market fluctuations.
+
+*/
+
+
+
+
+
+/*
+ * Goal by Sunday:
+ * 1. Stocks operate as agent.
+ * 2. Hedge fund operates as machine learning algorithm who can read stocks and update its portfolio (ask, what is a portfolio)
+ * 3. Raspberry Pi operates as Stock Exchange and Prime Broker (ask,how does a SE network operate? What services can the Prime-Broker offer to make processing easier for ESPHedge-Fund?)
+ * 4. MQTT understood and deployed
+*/
+
+
+
+
+
+
+
+
+
+
+
+
 
 #include <stdio.h>
 #include <string.h>
@@ -103,16 +150,6 @@ void buy_shares(Stock *s, int amount_to_buy){
     printf("Insufficient shares of stock available to make purchase \n");
   }
 }
-
-
-/*
- * To-do:
- * 1. Include sensor[x]
- * 2. make variable for sensor that will update price of stock
- * 3. make a function that will generate stock tick
- * 4. 
-
-*/
 
 void setup() {
   // put your setup code here, to run once:
