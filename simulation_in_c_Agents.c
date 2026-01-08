@@ -50,20 +50,17 @@ double nextPrice() {
 // This function injects a randomn variable to
 //inject into the stock
 double inject_volatility(void){
+	// seeding for a number
 	srand(time(NULL));
 	double volatile_var = (double)rand() / (double)RAND_MAX;
 	return volatile_var;
 }
 
-void loop() {
+int main(void) {
   double price = nextPrice();
-  Serial.print("Price: ");Serial.print(price);
+  printf("Price: "); printf(price);
   Serial.print(" ");
   delay(150);
   getTemp();
   Serial.println();
 }
-
-/*
-How would the temp change affect the price?
-*/
