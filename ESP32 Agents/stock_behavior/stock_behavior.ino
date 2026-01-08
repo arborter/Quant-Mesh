@@ -1,7 +1,7 @@
 /*
  * Project Name: Stock Simulation
  * Creator: Raphael
- * Date: 09 / 29 / 2025
+ * Date: 12 / 05 / 2026
  * Status: Work in Progress
  * 
  * Objective:
@@ -32,13 +32,6 @@
 
 
 
-
-
-
-
-
-
-
 /*
  * To-do:
  * 1. Integrate ISR for temperature change to relate to stock in real time
@@ -49,19 +42,6 @@
  * 6. These all integrated, we have a stock who operates dynamically in real time to events and standard market fluctuations.
 
 */
-
-
-
-
-
-/*
- * Goal by Sunday:
- * 1. Stocks operate as agent.
- * 2. Hedge fund operates as machine learning algorithm who can read stocks and update its portfolio (ask, what is a portfolio)
- * 3. Raspberry Pi operates as Stock Exchange and Prime Broker (ask,how does a SE network operate? What services can the Prime-Broker offer to make processing easier for ESPHedge-Fund?)
- * 4. MQTT understood and deployed
-*/
-
 
 
 
@@ -88,29 +68,29 @@ typedef struct {
   char symbol[10];
   double price;
   int volume;
+  // timestamp time
+  double volatility;
 } Stock;
 
-// a struct who represents a stock
+// a struct who creates a stock
 Stock create_stock(const char *symbol, double price, int volume){
   Stock s;
   snprintf(s.symbol, sizeof(s.symbol), "%s", symbol);  // safe copy, always null-terminated
   s.price = price;
   s.volume = volume;
-  
   // Below are additions to the dynamic properties of the stock.
-  // include ability to add time stamp
-  // s.timestamp = timestamp
-  // include market update (changes dictated by new cycle, geopolitics, natural disasters, changes in industry, etc.)
-  // s.volatility = volatility
+  //s.timestamp = timestamp;
+  // volatility is market update (changes dictated by new cycle, geopolitics, natural disasters, changes in industry, etc.)
+  //s.volatility = volatility; // in this case market volatility is dictated by temperature sensor.
 }
 
 volatile float celsius, fahrenheit; // Variables to influence market that also will update the Market Update
 
 // Parameters for Geometric Brownian Motion
 double S = 100.0;       // Initial price
-double mu = 0.05;       // Drift (annualized expected return)
-double sigma = 0.2;     // Volatility (annualized)
-double dt = 1.0 / 252;  // Time step (1 trading day in years)
+const double mu = 0.05;       // Drift (annualized expected return)
+const double sigma = 0.2;     // Volatility (annualized)
+const double dt = 1.0 / 252;  // Time step (1 trading day in years)
 
 // Generate a normally distributed random number using Box-Muller transform
 double randNormal() {
@@ -127,41 +107,22 @@ double nextPrice() {
   return S;
 }
 
-// function to update the price of a stock
-void update_price(Stock *s, double new_price){
-  s->price = new_price;
-}
-
-
-// this function is for the hedge fund to sell shares
-void sell_shares(Stock *s, int shares_to_sell){
-  if (s->volume >= shares_to_sell){
-    s->volume -= shares_to_sell;
-  } else {
-    printf("Insufficient volume to make sale \n");
-  }
-}
-
-// this function is for the hedge fund to purchase shares
-void buy_shares(Stock *s, int amount_to_buy){
-  if (s->volume >= amount_to_buy){
-    sell_shares(s, amount_to_buy);
-  } else {
-    printf("Insufficient shares of stock available to make purchase \n");
-  }
-}
-
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
-
 }
 
 void loop() {
-//  getTemp();
-
+  double price = nextPrice();
+  Serial.print("Price: ");Serial.print(price);
+  Serial.print(" ");
+  delay(150);
+  getTemp();
+  Serial.println();
 }
 
+/*
+How would the temp change affect the price?
+*/
 
 // set the changes to the stock from change in temperature through an ISR where changes to stock are only valid from a temp. change
 void getTemp(){
@@ -171,45 +132,43 @@ void getTemp(){
   byte type_s;
   byte data[9];
   byte addr[8];
-//  float celsius, fahrenheit;
+  float celsius, fahrenheit;
   
   if ( !ds.search(addr)) {
-    Serial.println("No more addresses.");
-    Serial.println();
+//    Serial.println("No more addresses.");
+//    Serial.println();
     ds.reset_search();
     delay(250);
-    return;
   }
   
-  Serial.print("ROM =");
+//  Serial.print("ROM =");
   for( i = 0; i < 8; i++) {
-    Serial.write(' ');
-    Serial.print(addr[i], HEX);
+//    Serial.write(' ');
+//    Serial.print(addr[i], HEX);
   }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
-      Serial.println("CRC is not valid!");
-      return;
+//      Serial.println("CRC is not valid!");
   }
-  Serial.println();
+//  Serial.println();
  
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
-      Serial.println("  Chip = DS18S20");  // or old DS1820
+//      Serial.println("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      Serial.println("  Chip = DS18B20");
+//      Serial.println("  Chip = DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      Serial.println("  Chip = DS1822");
+//      Serial.println("  Chip = DS1822");
       type_s = 0;
       break;
     default:
-      Serial.println("Device is not a DS18x20 family device.");
-      return;
+//      Serial.println("Device is not a DS18x20 family device.");
+      break;
   } 
 
   ds.reset();
@@ -223,17 +182,17 @@ void getTemp(){
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-  Serial.print("  Data = ");
-  Serial.print(present, HEX);
-  Serial.print(" ");
+//  Serial.print("  Data = ");
+//  Serial.print(present, HEX);
+//  Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
+//    Serial.print(data[i], HEX);
+//    Serial.print(" ");
   }
-  Serial.print(" CRC=");
-  Serial.print(OneWire::crc8(data, 8), HEX);
-  Serial.println();
+//  Serial.print(" CRC=");
+//  Serial.print(OneWire::crc8(data, 8), HEX);
+//  Serial.println();
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
@@ -256,9 +215,10 @@ void getTemp(){
   }
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print("  Temperature = ");
-  Serial.print(celsius);
-  Serial.print(" Celsius, ");
+//  Serial.print("  Temperature = ");
+//  Serial.print(celsius);
+//  Serial.print(" Celsius, ");
+  
+  Serial.print(" Fahrenheit: ");
   Serial.print(fahrenheit);
-  Serial.println(" Fahrenheit");
 }
