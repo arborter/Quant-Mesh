@@ -73,12 +73,15 @@ int main(void)
 {
     srand((unsigned int)time(NULL));
 
-    double price = nextPrice();
-    printf("Price: %f\n", price);
-
+    //double price = nextPrice();
+    //printf("Price: %f\n", price);
+    printf("Type the name of your stock: %f\n");
     scanf("%15s", SYMBOL);
+    //printf("Type the rate of change for your stock: \n");
     Stock s = create_stock(SYMBOL, 100.00, 100);
+    s.price = nextPrice();
     printf("STOCK: %s \n", s.symbol);
+    printf("Price: %f\n", s.price);
 
     //return 0;
 }
