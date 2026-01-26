@@ -2,7 +2,7 @@
  
 This project simulates a miniature financial market using a network of ESP32 microcontrollers and a Raspberry Pi.
 
-Each ESP32 acts as an **agent** that generates a synthetic stock price using stochastic processes like **Geometric Browninan Motion (GBM)**, **random walks**, and random number distribution.
+Each ESP32 acts as an **agent** that generates a synthetic stock price using stochastic processes like **Geometric Browninan Motion (GBM)**, **random walks**, and **random number distribution**.
 A central ESP32 acts as a **hedge fund** who analyzes the market to simulate trading strategies.
 
 ## Operation
@@ -12,13 +12,13 @@ The Pi has two operations:
 - It behaves as a prime-broker (further referred to as **Broker**).
 
 1. Agents send their data to a synthetic exchange on the PiSE over **MQTT**.
-2. The PiSE organizes the data from each agent into the following feeds:
+2a. The PiSE organizes the data of each agent's stock in a feed with the following information:
     - Timestamps 
     - Trade prices 
     - Market status
-3. The Broker subscribes to different streams at the request of the hedge fund.
-4. The Broker can aggregate data from streams, clean the data, and provide data in structure useful for the hedge fund.
-5. The hedge fund actively monitors feeds to assess and simulate trading strategies.
+3. The Broker sends different streams at the request of the hedge fund.
+4. The Broker creates a JSON file for each stock and adds a JSON object at each one's tick is created for each tick of a stock. The data is cleaned and made useful for the hedge fund.
+5. The hedge fund subscribes to the streams to assess and simulate trading strategies.
 
 ## Injecting Volatility
 
