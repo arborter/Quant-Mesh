@@ -12,7 +12,7 @@ The Pi has two operations:
 - It behaves as a prime-broker (further referred to as **Broker**).
 
 1. Agents send their data to a synthetic exchange on the PiSE over **MQTT**.
-2a. The PiSE organizes the data of each agent's stock in a feed with the following information:
+2. The PiSE organizes the data of each agent's stock in a feed with the following information:
     - Timestamps 
     - Trade prices 
     - Market status
