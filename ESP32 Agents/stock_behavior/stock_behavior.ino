@@ -1,67 +1,24 @@
-/*
- * Project Name: Stock Simulation
- * Creator: Raphael
- * Date: 12 / 05 / 2026
- * Status: Work in Progress
- * 
- * Objective:
- *  This is a simulation of a stock through synthetic means.
- * 
- * Anatomy of the stock:
- *  The simulation includes static qualities of a stock such as:
- *    - price
- *    - volume
- *    - symbol
- * 
- *  The simulation also includes dynamic properties:
- *    - volatility in price as per geopolitocal, news, and fluctuations inindustry
- *    - changes in volume as per purchase and sale of stock
- *    - changes in price as per purchse and sale of stock
- * 
- * Synthetic Means to Generate Behavior:
- *  The ESP32 is connected to sensors as a means to simulate the effects of news, 
- *  natural disasters, geopolitics, and other phenomena known to impact the stocks.
- * 
- * 
- * 
- * Libraries necessary:
- *  - OneWire (for the DS18x20 series of temperature sensor)
-*/
-
-
-
-
-
-/*
- * To-do:
- * 1. Integrate ISR for temperature change to relate to stock in real time
- * 2. Integrate into the struct Stock the update of temperature change as a variable
- * 3. Create Market-Update variable in struct Stock to update as a means to represent changes in news, geopolitics, natural disasters, changes in industry, etc.  
- * 4. Integrate GBM into a variable of the struct stock.
- * 5. Add timestamps as variable in struct of stock.
- * 6. These all integrated, we have a stock who operates dynamically in real time to events and standard market fluctuations.
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
+#include <WiFi.h>
+#include <PubSubClient.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <OneWire.h> // Temperature sensor library
+#include <esp_system.h> // utilize hardware for randomsignal generation
 
-const int DS18S20_Pin = 26; //DS18S20 Signal pin on digital pin 26
+// esp32 pico
+// this is the agent
 
-OneWire  ds(DS18S20_Pin);  // on pin 26 (a 4.7K resistor is necessary)
+const char* ssid = "----";
+const char* password = "----";
+const char* mqttServer = "00.00.00.00"; // IP of the Raspberry Pi
+const int mqttPort = 1900;
+const char* mqttTopic = "market/raw/stock";
+
+/*  STOCK MARKET SIMULATOR CODE BEGIN */
+
+int usable_number;
+
+char SYMBOL[16];
 
 // struct who represents a stock
 typedef struct {
@@ -72,19 +29,18 @@ typedef struct {
   double volatility;
 } Stock;
 
-// a struct who creates a stock
-Stock create_stock(const char *symbol, double price, int volume){
+// function who creates a stock
+Stock create_stock(const char *symbol, double (*funct_price)(void), int (*funct_vol)(void), double (*funct)(void)){
   Stock s;
   snprintf(s.symbol, sizeof(s.symbol), "%s", symbol);  // safe copy, always null-terminated
-  s.price = price;
-  s.volume = volume;
+  s.price = funct_price();
+  s.volume = funct_vol();
   // Below are additions to the dynamic properties of the stock.
   //s.timestamp = timestamp;
   // volatility is market update (changes dictated by new cycle, geopolitics, natural disasters, changes in industry, etc.)
-  //s.volatility = volatility; // in this case market volatility is dictated by temperature sensor.
+  s.volatility = funct(); // in this case market volatility is dictated by temperature sensor.
+  return s;
 }
-
-volatile float celsius, fahrenheit; // Variables to influence market that also will update the Market Update
 
 // Parameters for Geometric Brownian Motion
 double S = 100.0;       // Initial price
@@ -93,132 +49,134 @@ const double sigma = 0.2;     // Volatility (annualized)
 const double dt = 1.0 / 252;  // Time step (1 trading day in years)
 
 // Generate a normally distributed random number using Box-Muller transform
-double randNormal() {
+double randNormal(void) {
   double u1 = (double)random(1, 10000) / 10000.0;
   double u2 = (double)random(1, 10000) / 10000.0;
   return sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
 }
 
 // Simulate one price tick
-double nextPrice() {
+double nextPrice(void) {
   double Z = randNormal();
   double dS = S * (mu * dt + sigma * sqrt(dt) * Z);
   S = S + dS;
   return S;
 }
 
+// This function injects a randomn variable to
+//inject into the stock
+double inject_volatility(void){
+  double volatile_var = (double)rand() / (double)RAND_MAX;
+  return volatile_var;
+}
+
+//this function returns volume of a stock
+int create_volume(void){
+  return (rand() % 1000) + 1;
+}
+
+/*  STOCK MARKET SIMULATOR CODE END */
+
+
+char payload[50];
+
+ // create_stock(const char *symbol, double (*funct_price)(void), int (*funct_vol)(void), double (*funct)(void))
+ Stock test = create_stock("STOCK", nextPrice, create_volume, inject_volatility);
+
+/*  MQTT CODE BEGIN */
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+const int rgb_Pin = 2; // RGB LED
+const int red_pin = 13; // RED LED
+const int buttonPin = 38;  // input-only pin BUTTON
+
+bool lightOn = false; // stores the state of the LED
+const int threshold = 100; // brightness threshold
+
 void setup() {
   Serial.begin(115200);
+  pinMode(rgb_Pin, OUTPUT);
+  pinMode(red_pin, OUTPUT);
+  pinMode(buttonPin, INPUT);
+
+  // Connect to WiFi
+  WiFi.mode(WIFI_STA);delay(500);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(red_pin, HIGH);
+    delay(500); Serial.println(".");
+    digitalWrite(red_pin, LOW);Serial.println(usable_number);
+
+    Serial.print("WiFi status: ");
+    Serial.println(WiFi.status());
+  }
+  Serial.println("\nConnected to WiFi");
+
+  // Connect to Mosquitto Broker
+  client.setServer(mqttServer, mqttPort);
+  while (!client.connected()) {
+    Serial.print("Connecting to MQTT...");
+    if (client.connect("ESP32Publisher")) {
+      Serial.println("connected");
+    } else {
+      Serial.print("failed, rc= ");
+      Serial.println(client.state());
+      delay(2000);
+    }
+  }
+
+  // Random Number Generation using Random-Number-Generator Data Register:
+  while(true){
+    srand(esp_random());
+    Serial.print("ESP  Random Number = ");
+    uint32_t r = rand();
+    usable_number = r % 1001;   // 0–999
+    Serial.println(usable_number);
+    break;
+  }
+
+  // create_stock(const char *symbol, double (*funct_price)(void), int (*funct_vol)(void), double (*funct)(void))
+  //Stock test = create_stock("STOCK", nextPrice, create_volume, inject_volatility);
+  
+  Serial.println();
+  Serial.print("Symbol = "); Serial.println(test.symbol);
+  Serial.print("Price = "); Serial.println(test.price);
+  Serial.print("Volume = "); Serial.println(test.volume);
+  Serial.print("Volatility = "); Serial.println(test.volatility);
+  snprintf(payload, sizeof(payload),"%s %f %u %f", test.symbol, test.price, test.volume, test.volatility);
+  Serial.println();
+ 
 }
+
+/*  MQTT CODE END */
+
+
+/*  MQTT + STOCK AGENT BEGIN */
 
 void loop() {
-  double price = nextPrice();
-  Serial.print("Price: ");Serial.print(price);
-  Serial.print(" ");
-  delay(150);
-  getTemp();
-  Serial.println();
-}
+  int lightLevel = analogRead(rgb_Pin); // read the current brightness
+  int reading_red = digitalRead(red_pin);
+  test.price = nextPrice();
+  snprintf(payload, sizeof(payload),"%s %f %u %f", test.symbol, test.price, test.volume, test.volatility);
 
-/*
-How would the temp change affect the price?
-*/
-
-// set the changes to the stock from change in temperature through an ISR where changes to stock are only valid from a temp. change
-void getTemp(){
-  //returns the temperature from one DS18S20
-   byte i;
-  byte present = 0;
-  byte type_s;
-  byte data[9];
-  byte addr[8];
-  float celsius, fahrenheit;
-  
-  if ( !ds.search(addr)) {
-//    Serial.println("No more addresses.");
-//    Serial.println();
-    ds.reset_search();
-    delay(250);
-  }
-  
-//  Serial.print("ROM =");
-  for( i = 0; i < 8; i++) {
-//    Serial.write(' ');
-//    Serial.print(addr[i], HEX);
-  }
-
-  if (OneWire::crc8(addr, 7) != addr[7]) {
-//      Serial.println("CRC is not valid!");
-  }
-//  Serial.println();
- 
-  // the first ROM byte indicates which chip
-  switch (addr[0]) {
-    case 0x10:
-//      Serial.println("  Chip = DS18S20");  // or old DS1820
-      type_s = 1;
-      break;
-    case 0x28:
-//      Serial.println("  Chip = DS18B20");
-      type_s = 0;
-      break;
-    case 0x22:
-//      Serial.println("  Chip = DS1822");
-      type_s = 0;
-      break;
-    default:
-//      Serial.println("Device is not a DS18x20 family device.");
-      break;
-  } 
-
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44, 1);        // start conversion, with parasite power on at the end
-  
-  delay(1000);     // maybe 750ms is enough, maybe not
-  // we might do a ds.depower() here, but the reset will take care of it.
-  
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(0xBE);         // Read Scratchpad
-
-//  Serial.print("  Data = ");
-//  Serial.print(present, HEX);
-//  Serial.print(" ");
-  for ( i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds.read();
-//    Serial.print(data[i], HEX);
-//    Serial.print(" ");
-  }
-//  Serial.print(" CRC=");
-//  Serial.print(OneWire::crc8(data, 8), HEX);
-//  Serial.println();
-
-  // Convert the data to actual temperature
-  // because the result is a 16 bit signed integer, it should
-  // be stored to an "int16_t" type, which is always 16 bits
-  // even when compiled on a 32 bit processor.
-  int16_t raw = (data[1] << 8) | data[0];
-  if (type_s) {
-    raw = raw << 3; // 9 bit resolution default
-    if (data[7] == 0x10) {
-      // "count remain" gives full 12 bit resolution
-      raw = (raw & 0xFFF0) + 12 - data[6];
-    }
+  if (digitalRead(buttonPin) == LOW) {
+    digitalWrite(red_pin, HIGH);
+    //const char* msg = "ON";
+//    snprintf(payload, sizeof(payload),"%s %f %f %u", test.symbol, test.price, test.volume, test.volatility);
+    client.publish(mqttTopic, payload); // publish message to topic
+    lightOn = true;
+    Serial.print("Published: "); Serial.println(payload);
+    delay(1000);
   } else {
-    byte cfg = (data[4] & 0x60);
-    // at lower res, the low bits are undefined, so let's zero them
-    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
-    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
-    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-    //// default is 12 bit resolution, 750 ms conversion time
+    digitalWrite(red_pin, LOW);
+    const char* msg = "OFF";
+    client.publish(mqttTopic, msg); // publish message to topic
+    lightOn = false;
+    Serial.print("Published: "); Serial.println(msg);
+    delay(1000);
   }
-  celsius = (float)raw / 16.0;
-  fahrenheit = celsius * 1.8 + 32.0;
-//  Serial.print("  Temperature = ");
-//  Serial.print(celsius);
-//  Serial.print(" Celsius, ");
-  
-  Serial.print(" Fahrenheit: ");
-  Serial.print(fahrenheit);
 }
+
+/*  MQTT + STOCK AGENT END */
