@@ -1,78 +1,108 @@
-/*
- * Project Name: Hedge Fund Simulator
- * Date: 09/25/2025
- * Raphael
- *   
-  Objective:
-    A hedge fund who uses machine learning to make trades and build a portfolio.
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 
-  Lessons Learned:
-  
-*/
+// --- WiFi credentials ---
+const char* ssid = "----";
+const char* password = "----";
 
+// --- MQTT broker ---
+const char* mqttServer = "00.00.00.00"; // IP of the Raspberry Pi
+const int mqtt_port = 1883;
 
-#include "math.h"
-#include "stdio.h"
+// --- Stock symbol to follow ---
+const char* stockSymbol = "STOCK";
 
-// The uniform random number is a value within the range
-// of 0 and 1 with equal possibility of being selected.
-// This function simulates that randomness. It can be thought
-// of as a wildcard whose sole purpose is a single possibility
-// without knowledge of which. Here, this possibility is a
-// value, and this value is between 0 and 1.
-// It is called a uniform distribution because 
-// each possibility is equally possible
-float uniform(){
-  return (double)rand() /RAND_MAX;
-}
+// --- WiFi and MQTT clients ---
+WiFiClient espClient;
+PubSubClient client(espClient);
 
-// The uniform random number distribution is flat.We can give shape to
-// uniform random distribution if we take two independent uniform
-// randomly distributed numbers and set them on the Box-Muller
-// formula, we can geometricaly see them on a graph
-// where trigonometric operations are applied to the uniformly distributed
-// outcomes 
+// --- Strategy threshold ---
+float priceThreshold = 90.0;  // Example: take action if price drops below this
 
-void dice_roll(int n_rolls){
-  long sum = 0;
-  for(int i = 0; i < n_rolls; i++){
-    int roll = (rand() % 6) + 1;
-    sum +=roll;
+// --- Connect to WiFi ---
+void setup_wifi() {
+  Serial.print("Connecting to WiFi");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
-  return (double) sum / n_rolls; 
+  Serial.println("\nConnected to WiFi!");
 }
 
+// --- Callback when message is received ---
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+
+  // Copy payload into a null-terminated string
+  char msg[length + 1];
+  memcpy(msg, payload, length);
+  msg[length] = '\0';
+  Serial.println(msg);
+
+  // --- Parse JSON ---
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, msg);
+  if (error) {
+    Serial.print("JSON parse failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  const char* symbol = doc["symbol"];
+  float price = doc["price"];
+  int volume = doc["volume"];
+  float volatility = doc["volatility"];
+  const char* ts = doc["ts"];
+
+  Serial.print("Symbol: "); Serial.println(symbol);
+  Serial.print("Price: "); Serial.println(price);
+  Serial.print("Volume: "); Serial.println(volume);
+  Serial.print("Volatility: "); Serial.println(volatility);
+  Serial.print("Timestamp: "); Serial.println(ts);
+
+  // --- Simple strategy: print alert if price below threshold ---
+  if (price < priceThreshold) {
+    Serial.println(">>> ALERT: Price below threshold! Consider buying!");
+  }
+  else {
+    Serial.println(">>> ALERT: Consider selling!");
+  }
+}
+
+// --- Reconnect to MQTT broker if disconnected ---
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect("ESP32-Trader")) {
+      Serial.println("connected");
+      // Subscribe to cleaned stock feed
+      String topic = String("market/clean/stock/") + stockSymbol;
+      client.subscribe(topic.c_str());
+      Serial.print("Subscribed to: ");
+      Serial.println(topic);
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 2 seconds");
+      delay(2000);
+    }
+  }
+}
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(115200);
-
+  setup_wifi();
+  client.setServer(mqttServer, mqtt_port);
+  client.setCallback(callback);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
 }
-
-
-/*
- * NOTES:
- * 
- * Box-Muller: a representation of flat, single-line outcomes in a circular space
- * 
- * The Box–Muller uses logarithm and cosine (or sine) to 
- * take two flat random numbers and spread them out in a 
- * way that matches the bell curve.
- * 
- * The log and square root stretch values so that big 
- * deviations (far tails of the bell) are rarer.
- * 
- * The cosine/sine spin the numbers around a circle, 
- * making the distribution symmetric about zero.
- * 
- * So the trigonometric part gives the “shape” 
- * (spread in all directions), and the log/sqrt 
- * part makes the tails decay like a true Gaussian.
-
-
-*/
